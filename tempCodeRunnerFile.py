@@ -1,0 +1,1 @@
+en_sık_kelimeler = sorted(kelime_kullanım_sayisi.items(), key=lambda x: x[1], reverse=True)[:5]

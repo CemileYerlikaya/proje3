@@ -1,13 +1,87 @@
 import tkinter as tk
+from tkinter import Entry, Label, LEFT
 from tkinter import filedialog
 import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
+from collections import Counter
+
 nltk.download('punkt')
+
+class Kelime_arama:
+    def __init__(self):
+        self.selected_files = []
+
+    def aranan_kelime(self):
+        top = tk.Tk()
+
+    def aranan_kelime(self):
+        top = tk.Toplevel()
+
+        def kelime_arama_fonksiyonu():
+            girilen_kelime = E1.get()
+            kelimeyi_kontrol_et(girilen_kelime)
+
+        def kelimeyi_kontrol_et(kelime):
+            dosyalar_icerikleri = {}
+            for dosya in self.selected_files:
+                with open(dosya, 'r') as file:
+                    dosyalar_icerikleri[dosya] = file.read()
+            
+            kelimenin_bulundugu_cumleler = {}
+            for dosya, icerik in dosyalar_icerikleri.items():
+                cumleler = sent_tokenize(icerik)
+                for cumle in cumleler:
+                    if kelime.lower() in cumle.lower():
+                        kelimenin_bulundugu_cumleler[dosya] = kelimenin_bulundugu_cumleler.get(dosya, [])
+                        kelimenin_bulundugu_cumleler[dosya].append(cumle.strip())
+
+            if kelimenin_bulundugu_cumleler:
+                print(f"'{kelime}' kelimesi aşağıdaki cümlelerde bulunuyor:")
+                for dosya, cumleler in kelimenin_bulundugu_cumleler.items():
+                    print(f"\n{dosya}:")
+                    for cumle in cumleler:
+                        print(f"- {cumle}")
+            else:
+                print(f"'{kelime}' kelimesi seçilen dosyalarda bulunamadı.")
+
+        
+        def aranan_kelime_arayuzu(self):
+
+            kelime_arama_penceresi=tk.Tk()
+            kelime_arama_penceresi.title("Seçilen Kelimeye Dayalı İşlemler")
+            kelime_arama_penceresi.geometry('450x500')
+
+            label = tk.Label(kelime_arama_penceresi, text="Yapılabilecek İşlemler", fg="magenta", font='Times 16 bold' )
+            label.pack()
+
+            buton = tk.Button(kelime_arama_penceresi, text="Kelimeyi Metinlerden Çıkarma", activebackground='pink')
+            buton.place(x=80, y=50)
+
+            buton2 = tk.Button(kelime_arama_penceresi, text="Kelimenin Metinlerdeki Yerini Belirleme", command=lambda:self.kelimeyi_kontrol_et(), activebackground='pink')
+            buton2.place(x=80, y=90)
+            
+            buton3=tk.Button(kelime_arama_penceresi, text="Seçilen Kelime Kaç kez Dosyada Geçti" ,activebackground='pink')
+            buton3.pack()
+
+
+
+        L1 = Label(top, text="Aramada Kullanılacak Kelime")
+        L1.pack(side=LEFT)
+
+        E1 = Entry(top, bd=5)
+        E1.pack(side=LEFT)
+
+        buton = tk.Button(top, text="Kelimeyi Ara", command=kelime_arama_fonksiyonu, activebackground='light green')
+        buton.pack()
+
+        top.mainloop()
+    
+
 
 class Istatistik:
     selected_files = []
 
-    def en_sık_kullanılan_kelime(self):
+    def en_az_ve_sık_kullanılan_kelime(self):
         kelime_listesi = []
         kelime_kullanım_sayisi = {}
 
@@ -19,6 +93,7 @@ class Istatistik:
                 with open(dosya, 'r') as file:
                     veri = file.read()
                     ayrilan_kelimeler = word_tokenize(veri)
+                    print(ayrilan_kelimeler)
                 
                     for kelime in ayrilan_kelimeler:
                         if not kelime.isalnum():
@@ -27,31 +102,63 @@ class Istatistik:
                             kelime_kullanım_sayisi[kelime] = 1
                         else:
                             kelime_kullanım_sayisi[kelime] += 1
-    
-        en_sık_kelimeler = sorted(kelime_kullanım_sayisi.items(), key=lambda x: x[1], reverse=True)[:5]
-    
-        with open("en_sık_kullanilan_kelime.txt", "w") as file:
-            for kelime, sayi in en_sık_kelimeler:
-                file.write(f"{kelime}: {sayi}\n")
-
         
+            en_sık_kelimeler = sorted(kelime_kullanım_sayisi.items(), key=lambda x: x[1], reverse=True)[:5]
+            en_az_kelimeler = sorted(kelime_kullanım_sayisi.items(), key=lambda x: x[1])[:5]
+        
+            with open("en_sık_kullanilan_kelime.txt", "w") as file:
+                file.write("En Sık Kullanılan Kelimeler:\n")
+                for kelime, sayi in en_sık_kelimeler:
+                    file.write(f"{kelime}: {sayi}\n")
+                file.write("\nEn Az Kullanılan Kelimeler:\n")
+                for kelime, sayi in en_az_kelimeler:
+                    file.write(f"{kelime}: {sayi}\n")
 
-        secilen_dosya_yuzu.config(text=str(en_sık_kelimeler))
-
-        return en_sık_kelimeler
-                        
+            secilen_dosya_yuzu.config(text=f"Seçilen Dosyalarda En Sık ve En Az Kullanılan Kelimeler:\n\nEn Sık Kullanılan Kelimeler:\n{', '.join([kelime for kelime, sayi in en_sık_kelimeler])}\n\nEn Az Kullanılan Kelimeler:\n{', '.join([kelime for kelime, sayi in en_az_kelimeler])}")
     
+    def etkisiz_kelime_silme(self):
+        etkisiz_kelime_turkce = ["yani", "işte", "hani", "şey", "tabii ki", "well", "actually", "just", "şöyle", "basically", "and", "ve"]
+
+
+
+        if Dosyaverilerinidüzenleme.selected_files:
+            etkisiz_kelime_olmaksızın_olusan_yapi = [] 
+            for dosya in Dosyaverilerinidüzenleme.selected_files:
+                with open(dosya, 'r') as file:
+                    veri = file.read()
+                    ayrilan_kelimeler = word_tokenize(veri)
+                    uzunluk = len(etkisiz_kelime_turkce)
+
+                    for kelime in ayrilan_kelimeler:
+                        for i in range(uzunluk):
+                            if kelime == etkisiz_kelime_turkce[i]:
+                                break
+                        else:
+                            etkisiz_kelime_olmaksızın_olusan_yapi.append(kelime)  
+
+                    etkisiz_kelime_olmaksızın_olusan_yapi.append("\n")
+
+            secilen_dosya_yuzu.config(text=f"Etkisiz Kelimeler Çıkınca Oluşan Yapı:  {' '.join(etkisiz_kelime_olmaksızın_olusan_yapi)} ")
+
+
+
+
+
     def kelime_sayisi(self):
         dosya_uzunluklari = []
-        for dosya_yolu in self.selected_files:
-            with open(dosya_yolu, 'r') as file:
-                
-                veri = file.read()
-                kelimeler = word_tokenize(veri)
-                kelimeler = [kelime for kelime in kelimeler if kelime.isalnum()]
-                uzunluk = len(kelimeler)
-                dosya_uzunluklari.append(uzunluk)
-        kelime_sayisi_text = "\n".join([f"{i+1}. Dosyanızda yer alan kelime sayısı: {uzunluk}" for i, uzunluk in enumerate(dosya_uzunluklari)])
+        kacıncı_dosya_isleniyor = 1  
+
+        if Dosyaverilerinidüzenleme.selected_files: 
+            for dosya_yolu in Dosyaverilerinidüzenleme.selected_files:
+                with open(dosya_yolu, 'r') as file:
+                    veri = file.read()
+                    kelimeler = word_tokenize(veri)
+                    dosya_kelimeler = list(filter(str.isalnum, kelimeler))
+                    kelime_sayisi = len(dosya_kelimeler)
+                    dosya_uzunluklari.append((kacıncı_dosya_isleniyor, kelime_sayisi))
+                    kacıncı_dosya_isleniyor += 1  
+
+        kelime_sayisi_text = "\n".join([f"{dosya_numarasi}. Dosyanızda yer alan kelime sayısı: {kelime_sayisi}" for dosya_numarasi, kelime_sayisi in dosya_uzunluklari])
         secilen_dosya_yuzu.config(text=kelime_sayisi_text)
 
 class Dosyaverilerinidüzenleme:
@@ -201,8 +308,17 @@ def arayuz_olusturma():
     buton5 = tk.Button(pencere, text="Dosya Verilerinden Noktalama İşareti Silme", command=lambda: Dosyaverilerinidüzenleme().noktalama_isareti_silme(), activebackground='light green')
     buton5.pack()
 
-    buton6 = tk.Button(pencere, text="Kod İstatistikleri", command=lambda: Istatistik().en_sık_kullanılan_kelime(), activebackground='light green')
+    buton6 = tk.Button(pencere, text="En Sık ve En Az Kullanılan Kelimeler", command=lambda: Istatistik().en_az_ve_sık_kullanılan_kelime(), activebackground='light green')
     buton6.pack()
+
+    buton7=tk.Button(pencere, text="Gereksiz Kelime Silme", command=lambda: Istatistik().etkisiz_kelime_silme(),activebackground='light green')
+    buton7.pack()
+
+    buton8=tk.Button(pencere, text="Dosyalardaki Kelime Sayıları", command=lambda: Istatistik().kelime_sayisi() ,activebackground='light green')
+    buton8.pack()
+
+    buton9=tk.Button(pencere, text="Kelime ile Arama",activebackground='light green')
+    buton9.pack()
     
     pencere.mainloop()
 
