@@ -1,0 +1,13 @@
+En Sýk Kullanýlan Kelimeler:
+a: 6
+to: 5
+Bob: 5
+Cindrella: 3
+and: 3
+
+En Az Kullanýlan Kelimeler:
+lived: 1
+with: 1
+her: 1
+cruel: 1
+mother: 1

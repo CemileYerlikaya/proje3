@@ -4,11 +4,13 @@ from tkinter import filedialog
 import nltk
 from nltk.tokenize import word_tokenize, sent_tokenize
 from collections import Counter
+import PyPDF2
+from nltk.stem import WordNetLemmatizer
 
 nltk.download('punkt')
 
 class Kelime_arama:
-    def __init__(self):
+    def _init_(self):
         self.selected_files = []
 
     def aranan_kelime(self):
@@ -214,7 +216,7 @@ class Dosyaverilerinidüzenleme:
         
 class Dosyakiyaslama():
     def dosya_secme(self, label_widget):
-        selected_files = filedialog.askopenfilenames(title="Dosya Seç", filetypes=[("Metin Dosyaları", "*.txt")])
+        selected_files = filedialog.askopenfilenames(title="Dosya Seç", filetypes=[("Text Dosyaları", "*.txt")])
         if selected_files:
             dosya_listesi = "\n".join(selected_files)  
             label_widget.config(text="Seçilen Dosyalar:\n" + dosya_listesi)
@@ -246,7 +248,7 @@ class Dosyakiyaslama():
                     self.jaccard_benzerlik(Dosyaverilerinidüzenleme.selected_files[i], Dosyaverilerinidüzenleme.selected_files[j], label_widget)
 
     def secilen_iki_dosya_kiyasi(self, label_widget):
-        selected_files = filedialog.askopenfilenames(title="Dosya Seç", filetypes=[("Tüm Dosyalar", ".")])
+        selected_files = filedialog.askopenfilenames(title="Dosya Seç", filetypes=[("Text Dosyaları", "*.txt")])
         if len(selected_files) == 2:  
             dosya_listesi = "\n".join(selected_files)  
             label_widget.config(text="Seçilen Dosyalar:\n" + dosya_listesi)
@@ -279,6 +281,96 @@ class Dosyakiyaslama():
         buton2 = tk.Button(acilacak_diger_pencere, text="Secilen 2 Dosyanın Benzerliğini Kıyaslama", command=lambda: self.benzerlik_kıyaslama_islemi(label_widget), activebackground='pink')
         buton2.place(x=80, y=90)
 
+
+
+class Pdfle_ilgili_islemler():
+    def __init__(self, pencere):
+        self.pencere = pencere
+        self.yeni_pencere = None
+        self.dosya_label = None 
+        self.selected_files = None
+        self.kelime_sayisi_label = None  
+
+    def yeni_arayuz(self):
+        self.yeni_pencere = tk.Tk()
+        self.yeni_pencere.title("PDF'e Dayanan İşlem Yapısı")
+        self.yeni_pencere.geometry('450x500')
+
+        label = tk.Label(self.yeni_pencere, text="PDF ANALİZİ", fg="#FFB347", font='Times 16 bold')
+        label.pack()
+
+        buton = tk.Button(self.yeni_pencere, text="PDF Ekle", command=self.pdf_secme, activebackground="#FF6961")
+        buton.pack()
+
+        self.dosya_label = tk.Label(self.yeni_pencere, text="Seçilen Dosyalar:\n")  
+        self.dosya_label.pack()
+
+        buton1 = tk.Button(self.yeni_pencere, text="Kelime Sayısını Hesapla", command=self.kelime_sayisini_hesapla, activebackground="#FF6961")
+        buton1.pack()
+
+        self.kelime_sayisi_label = tk.Label(self.yeni_pencere, text="")
+        self.kelime_sayisi_label.pack()
+
+        buton2=tk.Button(self.yeni_pencere, text="Harf Sayısı Hesapla", command=self.harf_sayisi, activebackground="#B19CD9")
+        buton2.pack()
+
+
+
+        self.yeni_pencere.mainloop()
+
+    def buton_tiklandiginda(self):
+        self.pencere.destroy()
+        self.yeni_arayuz()
+
+    def pdf_secme(self):
+        self.selected_files = filedialog.askopenfilenames(title="Dosya Seç", filetypes=[("PDF Dosyaları", "*.pdf")])
+        if self.selected_files:
+            dosya_listesi = "\n".join(self.selected_files)
+            self.dosya_label.config(text="Seçilen Dosyalar:\n" + dosya_listesi)  
+
+    def kelime_sayisini_hesapla(self):
+        
+        toplam_kelime_sayisi = 0
+        for dosya in self.selected_files:
+            with open(dosya, 'rb') as pdf_file:
+                pdf_reader = PyPDF2.PdfReader(pdf_file)
+                kelime_sayisi = 0
+                for page in pdf_reader.pages:
+                    yazi = page.extract_text()
+                    if yazi:
+                        kelimeler = nltk.word_tokenize(yazi)
+                    for kelime in kelimeler:
+                        if kelime.isalnum(): 
+                            kelime_sayisi += 1
+            toplam_kelime_sayisi += kelime_sayisi
+        self.kelime_sayisi_label.config(text=f"Metinlerde Geçen Toplam Kelime Sayısı: {toplam_kelime_sayisi}")
+
+    def harf_sayisi(self):
+        if self.selected_files:
+            for widget in self.yeni_pencere.winfo_children():
+                widget.destroy()
+
+            for dosya in self.selected_files:
+                with open(dosya, 'rb') as pdf_file:
+                    pdf_okuma = PyPDF2.PdfReader(pdf_file)
+                    kelimeler = []
+                    toplam_harf_sayisi = 0
+                    for page in pdf_okuma.pages:
+                        yazi = page.extract_text()
+                        if yazi:
+                            for kelime in nltk.word_tokenize(yazi):
+                                if kelime.isalnum():
+                                    kelimeler.append(kelime)
+                                    toplam_harf_sayisi += len(kelime)
+                    dosya_adi = dosya.split("/")[-1]
+                    yazdirilacak = f"Toplam Harf Sayısı ({dosya_adi}): {toplam_harf_sayisi}"
+                label = tk.Label(self.yeni_pencere, text=yazdirilacak)
+                label.pack()
+
+                    
+        
+
+
 def arayuz_olusturma():
     global secilen_dosya_yuzu
     pencere = tk.Tk()
@@ -293,8 +385,11 @@ def arayuz_olusturma():
 
     dosya_kiyaslama = Dosyakiyaslama()
 
-    buton = tk.Button(pencere, text="Dosya Ekleme", command=lambda: dosya_kiyaslama.dosya_secme(secilen_dosya_yuzu), activebackground='light green')
+    buton = tk.Button(pencere, text="Txt Dosyası Ekle", command=lambda: dosya_kiyaslama.dosya_secme(secilen_dosya_yuzu), activebackground='light green')
     buton.pack()
+
+    buton10=tk.Button(pencere, text="PDF Dosyası Ekle", command=lambda:Pdfle_ilgili_islemler(pencere).buton_tiklandiginda(), activebackground='light green')
+    buton10.pack()
 
     buton2 = tk.Button(pencere, text="Benzerlik Kıyaslama", command=lambda: dosya_kiyaslama.benzerlik_kıyaslama(secilen_dosya_yuzu), activebackground='light green')
     buton2.pack()
