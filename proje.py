@@ -286,33 +286,36 @@ class Dosyakiyaslama():
 class Pdfle_ilgili_islemler():
     def __init__(self, pencere):
         self.pencere = pencere
-        self.yeni_pencere = None
-        self.dosya_label = None 
-        self.selected_files = None
-        self.kelime_sayisi_label = None  
+        
 
     def yeni_arayuz(self):
         self.yeni_pencere = tk.Tk()
         self.yeni_pencere.title("PDF'e Dayanan İşlem Yapısı")
-        self.yeni_pencere.geometry('450x500')
+        self.yeni_pencere.geometry('650x575')
 
         label = tk.Label(self.yeni_pencere, text="PDF ANALİZİ", fg="#FFB347", font='Times 16 bold')
         label.pack()
 
-        buton = tk.Button(self.yeni_pencere, text="PDF Ekle", command=self.pdf_secme, activebackground="#FF6961")
+        buton = tk.Button(self.yeni_pencere, text="PDF Ekle", command=lambda:self.pdf_secme(), activebackground="#FFB347")
         buton.pack()
 
         self.dosya_label = tk.Label(self.yeni_pencere, text="Seçilen Dosyalar:\n")  
         self.dosya_label.pack()
 
-        buton1 = tk.Button(self.yeni_pencere, text="Kelime Sayısını Hesapla", command=self.kelime_sayisini_hesapla, activebackground="#FF6961")
+        buton1 = tk.Button(self.yeni_pencere, text="Toplam Kelime Sayısını Hesapla", command=lambda:self.kelime_sayisini_hesapla(), activebackground="#FF6961")
         buton1.pack()
 
         self.kelime_sayisi_label = tk.Label(self.yeni_pencere, text="")
         self.kelime_sayisi_label.pack()
 
-        buton2=tk.Button(self.yeni_pencere, text="Harf Sayısı Hesapla", command=self.harf_sayisi, activebackground="#B19CD9")
+        buton2=tk.Button(self.yeni_pencere, text="Harf Sayısı Hesapla", command=lambda:self.harf_sayisi(), activebackground="#B19CD9")
         buton2.pack()
+
+        buton3=tk.Button(self.yeni_pencere, text="Cümle Sayısı Hesapla", command=lambda:self.cumle_sayisi(), activebackground="#FFC0CB")
+        buton3.pack()
+
+        buton4=tk.Button(self.yeni_pencere, text="Benzerlik Kıyasla", command=lambda:self.jaccard_benzerligi(), activebackground="#A0D6B4")
+        buton4.pack()
 
 
 
@@ -347,16 +350,14 @@ class Pdfle_ilgili_islemler():
 
     def harf_sayisi(self):
         if self.selected_files:
-            for widget in self.yeni_pencere.winfo_children():
-                widget.destroy()
 
             for dosya in self.selected_files:
                 with open(dosya, 'rb') as pdf_file:
                     pdf_okuma = PyPDF2.PdfReader(pdf_file)
                     kelimeler = []
                     toplam_harf_sayisi = 0
-                    for page in pdf_okuma.pages:
-                        yazi = page.extract_text()
+                    for sayfa in pdf_okuma.pages:
+                        yazi = sayfa.extract_text()
                         if yazi:
                             for kelime in nltk.word_tokenize(yazi):
                                 if kelime.isalnum():
@@ -366,6 +367,48 @@ class Pdfle_ilgili_islemler():
                     yazdirilacak = f"Toplam Harf Sayısı ({dosya_adi}): {toplam_harf_sayisi}"
                 label = tk.Label(self.yeni_pencere, text=yazdirilacak)
                 label.pack()
+
+
+    def pdf_jaccard_benzerligi_hesaplama(self, secilen1, secilen2):
+        with open(secilen1, 'rb') as dosya1, open(secilen2, 'rb') as dosya2:
+            pdf1 = PyPDF2.PdfReader(dosya1)
+            pdf2 = PyPDF2.PdfReader(dosya2)
+            kelime_seti1 = set()
+            kelime_seti2 = set()
+            for sayfa in pdf1.pages:
+                kelime_seti1.update(word_tokenize(sayfa.extract_text().lower()))
+            for sayfa in pdf2.pages:
+                kelime_seti2.update(word_tokenize(sayfa.extract_text().lower()))
+            benzerlik = len(kelime_seti1.intersection(kelime_seti2)) / len(kelime_seti1.union(kelime_seti2))
+            secilen_dosya_Adi = secilen1.split('/')[-1] 
+            secilen_dosya_Adi1 = secilen2.split('/')[-1]
+            yazdirilacak = f" ({secilen_dosya_Adi} - {secilen_dosya_Adi1}) dosyalarının jaccard benzerliği : {benzerlik}"
+            label = tk.Label(self.yeni_pencere, text=yazdirilacak)
+            label.pack()
+
+    def jaccard_benzerligi(self):
+        dosya_sayisi = len(self.selected_files)
+        for i in range(dosya_sayisi):
+            for j in range(i + 1, dosya_sayisi):
+                self.pdf_jaccard_benzerligi_hesaplama(self.selected_files[i], self.selected_files[j])
+
+    def cumle_sayisi(self):
+        if self.selected_files:
+            for dosya in self.selected_files:
+                with open(dosya, 'rb') as pdf_file:
+                    pdf_okuma = PyPDF2.PdfReader(pdf_file)
+                    cumleler=[]
+                    for sayfa in pdf_okuma.pages:
+                        yazi=sayfa.extract_text()
+                        for cumle in sent_tokenize(yazi):
+                            cumleler.append(cumle)
+                    dosya_adi = dosya.split("/")[-1]
+                    sayi=len(cumleler)
+                    yazdirilacak=f"Toplam Cümle Sayısı ({dosya_adi}): {sayi}"
+
+                label = tk.Label(self.yeni_pencere, text=yazdirilacak)
+                label.pack()
+
 
                     
         
