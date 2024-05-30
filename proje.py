@@ -1,208 +1,104 @@
-import tkinter as tk
-from tkinter import Entry, Label, LEFT
-from tkinter import filedialog
+import json
+import os
+import matplotlib.pyplot as plt
 import nltk
+import string
+from tkinter import *
+from tkinter.filedialog import *
+from tkinter.scrolledtext import ScrolledText
+from googletrans import Translator
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
+from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize, sent_tokenize
 from collections import Counter
-import PyPDF2
-from nltk.stem import WordNetLemmatizer
+from tkinter import messagebox
+from tkinter import filedialog
 
-nltk.download('punkt')
+class Arama_yapma:
+    def dosya_secme(self):
+        selected_files = filedialog.askopenfilenames(title="Dosya Seç", filetypes=[("Metin Dosyaları", "*.txt")])
+        if selected_files:
+            self.kelime_sec(selected_files)
 
-class Kelime_arama:
-    def _init_(self):
-        self.selected_files = []
+    def kelime_sec(self, dosyalar):
+        kelime_penceresi = Toplevel(arayuz)
+        kelime_penceresi.title("Kelime Seç")
 
-    def aranan_kelime(self):
-        top = tk.Tk()
+        Label(kelime_penceresi, text="Bir kelime girin:", font=("Helvetica", 14)).pack(pady=10)
 
-    def aranan_kelime(self):
-        top = tk.Toplevel()
+        kelime_entry = Entry(kelime_penceresi, font=("Helvetica", 12))
+        kelime_entry.pack(pady=10)
 
-        def kelime_arama_fonksiyonu():
-            girilen_kelime = E1.get()
-            kelimeyi_kontrol_et(girilen_kelime)
+        Button(kelime_penceresi, text="Ara",
+               command=lambda: self.kelime_ara(kelime_entry.get(), kelime_penceresi, dosyalar)).pack(pady=5)
 
-        def kelimeyi_kontrol_et(kelime):
-            dosyalar_icerikleri = {}
-            for dosya in self.selected_files:
-                with open(dosya, 'r') as file:
-                    dosyalar_icerikleri[dosya] = file.read()
-            
-            kelimenin_bulundugu_cumleler = {}
-            for dosya, icerik in dosyalar_icerikleri.items():
-                cumleler = sent_tokenize(icerik)
-                for cumle in cumleler:
-                    if kelime.lower() in cumle.lower():
-                        kelimenin_bulundugu_cumleler[dosya] = kelimenin_bulundugu_cumleler.get(dosya, [])
-                        kelimenin_bulundugu_cumleler[dosya].append(cumle.strip())
+    def kelime_ara(self, kelime, pencere, dosyalar):
+        pencere.destroy()
+        self.ekrana_yazdirma(kelime, dosyalar)
 
-            if kelimenin_bulundugu_cumleler:
-                print(f"'{kelime}' kelimesi aşağıdaki cümlelerde bulunuyor:")
-                for dosya, cumleler in kelimenin_bulundugu_cumleler.items():
-                    print(f"\n{dosya}:")
-                    for cumle in cumleler:
-                        print(f"- {cumle}")
-            else:
-                print(f"'{kelime}' kelimesi seçilen dosyalarda bulunamadı.")
+    def kelime_sayisi_bulma(self, kelime, dosyalar):
+        kelime_sayisi = 0
+        for dosya_yolu in dosyalar:
+            with open(dosya_yolu, 'r') as file:
+                veri = file.read()
+                kelimeler = word_tokenize(veri)
+                kelime_sayisi += kelimeler.count(kelime)
+        return kelime_sayisi
 
+    def cumle_bulma(self, kelime, dosyalar):
+        cumleler = []
+        for dosya_yolu in dosyalar:
+            with open(dosya_yolu, 'r') as file:
+                veri = file.read()
+                ayrilan_cumleler = sent_tokenize(veri)
+                for cumle in ayrilan_cumleler:
+                    if kelime in word_tokenize(cumle):
+                        cumleler.append(cumle)
+        return cumleler
+
+    def ekrana_yazdirma(self, kelime, dosyalar):
+        kelime_sayisi = self.kelime_sayisi_bulma(kelime, dosyalar)
+        bulunan_cumleler = self.cumle_bulma(kelime, dosyalar)
+
+        sonuc_penceresi = Toplevel(arayuz)
+        sonuc_penceresi.title("Arama Sonuçları")
+
+        sonuclar_label = Label(sonuc_penceresi, text="Arama Sonuçları:", font=("Helvetica", 14, 'bold'))
+        sonuclar_label.pack(pady=5)
+        sonuclar_text = ScrolledText(sonuc_penceresi, width=100, height=25, font=("Helvetica", 12))
+        sonuclar_text.pack(pady=5)
+
+        sonuclar_text.insert('end', f"'{kelime}' kelimesi toplam {kelime_sayisi} kez geçti.\n\n")
+        sonuclar_text.insert('end', "Kelimenin geçtiği cümleler:\n")
+        for cumle in bulunan_cumleler:
+            sonuclar_text.insert('end', f"{cumle}\n")
         
-        def aranan_kelime_arayuzu(self):
+        sonuclar_text.config(state='disabled')
 
-            kelime_arama_penceresi=tk.Tk()
-            kelime_arama_penceresi.title("Seçilen Kelimeye Dayalı İşlemler")
-            kelime_arama_penceresi.geometry('450x500')
+        Button(sonuc_penceresi, text="Geri Dön", command=sonuc_penceresi.destroy).pack(pady=5)
 
-            label = tk.Label(kelime_arama_penceresi, text="Yapılabilecek İşlemler", fg="magenta", font='Times 16 bold' )
-            label.pack()
+class Metin_islemleri:
+    def dosya_secme(self):
+        selected_files = filedialog.askopenfilenames(title="Dosya Seç", filetypes=[("Metin Dosyaları", "*.txt")])
+        if selected_files:
+            self.secim(selected_files)
 
-            buton = tk.Button(kelime_arama_penceresi, text="Kelimeyi Metinlerden Çıkarma", activebackground='pink')
-            buton.place(x=80, y=50)
+    def secim(self, dosyalar):
+        analiz_penceresi = Toplevel(arayuz)
+        analiz_penceresi.title("Analiz Seçenekleri")
 
-            buton2 = tk.Button(kelime_arama_penceresi, text="Kelimenin Metinlerdeki Yerini Belirleme", command=lambda:self.kelimeyi_kontrol_et(), activebackground='pink')
-            buton2.place(x=80, y=90)
-            
-            buton3=tk.Button(kelime_arama_penceresi, text="Seçilen Kelime Kaç kez Dosyada Geçti" ,activebackground='pink')
-            buton3.pack()
+        Label(analiz_penceresi, text="Lütfen bir seçenek seçin", font=("Helvetica", 14)).pack(pady=10)
 
+        Button(analiz_penceresi, text="Metni Cümlelerine Ayır",
+               command=lambda: [analiz_penceresi.destroy(), self.ekrana_yazdirma("ayir", dosyalar)]).pack(pady=5)
+        Button(analiz_penceresi, text="Gereksiz Kelimeleri Sil",
+               command=lambda: [analiz_penceresi.destroy(), self.ekrana_yazdirma("gereksiz", dosyalar)]).pack(pady=5)
+        Button(analiz_penceresi, text="Noklama İşaretlerini Kaldır",
+               command=lambda: [analiz_penceresi.destroy(), self.ekrana_yazdirma("noktalama", dosyalar)]).pack(pady=5)
 
-
-        L1 = Label(top, text="Aramada Kullanılacak Kelime")
-        L1.pack(side=LEFT)
-
-        E1 = Entry(top, bd=5)
-        E1.pack(side=LEFT)
-
-        buton = tk.Button(top, text="Kelimeyi Ara", command=kelime_arama_fonksiyonu, activebackground='light green')
-        buton.pack()
-
-        top.mainloop()
-    
-
-
-class Istatistik:
-    selected_files = []
-
-    def en_az_ve_sık_kullanılan_kelime(self):
-        kelime_listesi = []
-        kelime_kullanım_sayisi = {}
-
-        with open("en_sık_kullanilan_kelime.txt", "w") as file:
-            file.write("")
-    
-        if Dosyaverilerinidüzenleme.selected_files:
-            for dosya in Dosyaverilerinidüzenleme.selected_files:
-                with open(dosya, 'r') as file:
-                    veri = file.read()
-                    ayrilan_kelimeler = word_tokenize(veri)
-                    print(ayrilan_kelimeler)
-                
-                    for kelime in ayrilan_kelimeler:
-                        if not kelime.isalnum():
-                            continue
-                        if kelime not in kelime_kullanım_sayisi:
-                            kelime_kullanım_sayisi[kelime] = 1
-                        else:
-                            kelime_kullanım_sayisi[kelime] += 1
-        
-            en_sık_kelimeler = sorted(kelime_kullanım_sayisi.items(), key=lambda x: x[1], reverse=True)[:5]
-            en_az_kelimeler = sorted(kelime_kullanım_sayisi.items(), key=lambda x: x[1])[:5]
-        
-            with open("en_sık_kullanilan_kelime.txt", "w") as file:
-                file.write("En Sık Kullanılan Kelimeler:\n")
-                for kelime, sayi in en_sık_kelimeler:
-                    file.write(f"{kelime}: {sayi}\n")
-                file.write("\nEn Az Kullanılan Kelimeler:\n")
-                for kelime, sayi in en_az_kelimeler:
-                    file.write(f"{kelime}: {sayi}\n")
-
-            secilen_dosya_yuzu.config(text=f"Seçilen Dosyalarda En Sık ve En Az Kullanılan Kelimeler:\n\nEn Sık Kullanılan Kelimeler:\n{', '.join([kelime for kelime, sayi in en_sık_kelimeler])}\n\nEn Az Kullanılan Kelimeler:\n{', '.join([kelime for kelime, sayi in en_az_kelimeler])}")
-    
-    def etkisiz_kelime_silme(self):
-        etkisiz_kelime_turkce = ["yani", "işte", "hani", "şey", "tabii ki", "well", "actually", "just", "şöyle", "basically", "and", "ve"]
-
-
-
-        if Dosyaverilerinidüzenleme.selected_files:
-            etkisiz_kelime_olmaksızın_olusan_yapi = [] 
-            for dosya in Dosyaverilerinidüzenleme.selected_files:
-                with open(dosya, 'r') as file:
-                    veri = file.read()
-                    ayrilan_kelimeler = word_tokenize(veri)
-                    uzunluk = len(etkisiz_kelime_turkce)
-
-                    for kelime in ayrilan_kelimeler:
-                        for i in range(uzunluk):
-                            if kelime == etkisiz_kelime_turkce[i]:
-                                break
-                        else:
-                            etkisiz_kelime_olmaksızın_olusan_yapi.append(kelime)  
-
-                    etkisiz_kelime_olmaksızın_olusan_yapi.append("\n")
-
-            secilen_dosya_yuzu.config(text=f"Etkisiz Kelimeler Çıkınca Oluşan Yapı:  {' '.join(etkisiz_kelime_olmaksızın_olusan_yapi)} ")
-
-
-
-
-
-    def kelime_sayisi(self):
-        dosya_uzunluklari = []
-        kacıncı_dosya_isleniyor = 1  
-
-        if Dosyaverilerinidüzenleme.selected_files: 
-            for dosya_yolu in Dosyaverilerinidüzenleme.selected_files:
-                with open(dosya_yolu, 'r') as file:
-                    veri = file.read()
-                    kelimeler = word_tokenize(veri)
-                    dosya_kelimeler = list(filter(str.isalnum, kelimeler))
-                    kelime_sayisi = len(dosya_kelimeler)
-                    dosya_uzunluklari.append((kacıncı_dosya_isleniyor, kelime_sayisi))
-                    kacıncı_dosya_isleniyor += 1  
-
-        kelime_sayisi_text = "\n".join([f"{dosya_numarasi}. Dosyanızda yer alan kelime sayısı: {kelime_sayisi}" for dosya_numarasi, kelime_sayisi in dosya_uzunluklari])
-        secilen_dosya_yuzu.config(text=kelime_sayisi_text)
-
-class Dosyaverilerinidüzenleme:
-    selected_files = []
-
-    def cumle_ayırma(self):
-        with open("ayrilan_cumleler.txt", "w") as file:
-            file.write("")  
-        if self.selected_files:
-            dosya_sayisi = len(self.selected_files)
-            for i in range(dosya_sayisi):
-                with open(self.selected_files[i], 'r') as file:
-                    veri = file.read()
-                    ayrilan_cumleler = sent_tokenize(veri)
-                    with open("ayrilan_cumleler.txt", "a") as file:
-                        file.write(f"{i+1}. Dosyanın cümlelerine ayrılmış formu: {ayrilan_cumleler} \n \n")
-
-            with open("ayrilan_cumleler.txt", "r") as file:
-                    veri = file.readlines()
-                    
-            secilen_dosya_yuzu.config(text=veri)
-                    
-
-    def kelimelere_ayırma(self):
-        with open("ayrilan_kelimeler.txt", "w") as file:
-            file.write("")  
-        if self.selected_files:
-            dosya_sayisi = len(self.selected_files)
-            for i in range(dosya_sayisi):
-                with open(self.selected_files[i], 'r') as file:
-                    veri = file.read()
-                    ayrilan_kelimeler = word_tokenize(veri)
-                    with open("ayrilan_kelimeler.txt", "a") as file:
-                        file.write(f"{i+1}. Dosyanın kelimelerine ayrılmış formu: {ayrilan_kelimeler} \n")
-            with open("ayrilan_kelimeler.txt", "r") as file:
-                    veri = file.readlines()
-
-            secilen_dosya_yuzu.config(text=veri)
-
-    def noktalama_isareti_silme(self):
+    def noktalama_isareti_silme(self, selected_files):
         noktalamasız_liste = []
-        for dosya_yolu in self.selected_files:
+        for dosya_yolu in selected_files:
             with open(dosya_yolu, 'r') as file:
                 veri = file.read()
                 kelimeler = word_tokenize(veri)
@@ -210,254 +106,415 @@ class Dosyaverilerinidüzenleme:
                 for kelime in kelimeler:
                     if kelime.isalnum():
                         dosya_noktalamasız_liste.append(kelime)
-                noktalamasız_liste.append(dosya_noktalamasız_liste)
+                noktalamasız_liste.append(" ".join(dosya_noktalamasız_liste))
+        return noktalamasız_liste
 
-        secilen_dosya_yuzu.config(text=noktalamasız_liste)
-        
+    def cumle_ayirma(self, selected_files):
+        ayrilan_cumleler_listesi = []
+        for i, dosya_yolu in enumerate(selected_files):
+            with open(dosya_yolu, 'r') as file:
+                veri = file.read()
+                ayrilan_cumleler = sent_tokenize(veri)
+                ayrilan_cumleler_listesi.append(f"{i + 1}. Dosyanın cümlelerine ayrılmış formu: \n {'\n'.join(ayrilan_cumleler)} \n")
+        return ayrilan_cumleler_listesi
+
+    def etkisiz_kelime_silme(self, selected_files):
+        etkisiz_kelime_turkce = ["yani", "işte", "hani", "şey", "tabii ki", "well", "actually", "just", "şöyle", "basically", "and", "ve"]
+        etkisiz_kelime_olmaksizin_olusan_yapi = []
+        for dosya in selected_files:
+            with open(dosya, 'r') as file:
+                veri = file.read()
+                ayrilan_kelimeler = word_tokenize(veri)
+                for kelime in ayrilan_kelimeler:
+                    if kelime not in etkisiz_kelime_turkce:
+                        etkisiz_kelime_olmaksizin_olusan_yapi.append(kelime)
+                etkisiz_kelime_olmaksizin_olusan_yapi.append("\n")
+        return [" ".join(etkisiz_kelime_olmaksizin_olusan_yapi)]
+
+    def ekrana_yazdirma(self, analiz_turu, selected_files):
+        if analiz_turu == "gereksiz":
+            analiz_sonuclari = self.etkisiz_kelime_silme(selected_files)
+        elif analiz_turu == "ayir":
+            analiz_sonuclari = self.cumle_ayirma(selected_files)
+        elif analiz_turu == "noktalama":
+            analiz_sonuclari = self.noktalama_isareti_silme(selected_files)
+
+        sonuc_penceresi = Toplevel(arayuz)
+        sonuc_penceresi.title("Analiz Sonuçları")
+
+        sonuclar_label = Label(sonuc_penceresi, text="Analiz Sonuçları:", font=("Helvetica", 14, 'bold'))
+        sonuclar_label.pack(pady=5)
+        sonuclar_text = ScrolledText(sonuc_penceresi, width=100, height=25, font=("Helvetica", 12))
+        sonuclar_text.pack(pady=5)
+
+        Button(sonuc_penceresi, text="Geri Dön", command=sonuc_penceresi.destroy).pack(pady=5)
+
+        for sonuc in analiz_sonuclari:
+            sonuclar_text.insert('end', f"{sonuc}\n")
+        sonuclar_text.config(state='disabled')
 class Dosyakiyaslama():
-    def dosya_secme(self, label_widget):
-        selected_files = filedialog.askopenfilenames(title="Dosya Seç", filetypes=[("Text Dosyaları", "*.txt")])
+    def dosya_secme(self):
+        selected_files = filedialog.askopenfilenames(title="Dosya Seç", filetypes=[("Metin Dosyaları", "*.txt")])
         if selected_files:
-            dosya_listesi = "\n".join(selected_files)  
-            label_widget.config(text="Seçilen Dosyalar:\n" + dosya_listesi)
-            Dosyaverilerinidüzenleme.selected_files = selected_files
+            dosya_listesi = "\n".join(selected_files)
+            print("Seçilen Dosyalar:\n" + dosya_listesi)
             dosya_sayisi = len(selected_files)
             print(f"{dosya_sayisi} dosya seçildi.")
-            return selected_files
+            yazdirilacak = []
 
-    def jaccard_benzerlik(self, dosya_yolu1, dosya_yolu2, label_widget):
-        with open(dosya_yolu1, 'r') as file1, open(dosya_yolu2, 'r') as file2:
-            kıyaslanacak1 = set(file1.read().split())
-            kıyaslanacak2 = set(file2.read().split())
+            if dosya_sayisi >= 2:
+                for i in range(dosya_sayisi):
+                   for j in range(i + 1, dosya_sayisi):
+                        dosya_yolu1 = selected_files[i]
+                        dosya_yolu2 = selected_files[j]
+                        benzerlik = self.jaccard_benzerlik(dosya_yolu1, dosya_yolu2)
+                        yazdirilacak.append(f"{dosya_yolu1} ve {dosya_yolu2} dosyaları arasındaki Jaccard Benzerliği: {benzerlik}")
+                return yazdirilacak
+            else:
+                yazdirilacak = "Lütfen en az iki dosya seçin."
+                return [yazdirilacak]
 
-        intersection = len(kıyaslanacak1.intersection(kıyaslanacak2))
-        union = len(kıyaslanacak1.union(kıyaslanacak2))
+
+    def jaccard_benzerlik(self, dosya_yolu1, dosya_yolu2):
+        with open(dosya_yolu1, 'r', encoding='utf-8') as file1, open(dosya_yolu2, 'r', encoding='utf-8') as file2:
+            kiyaslanacak1 = set(file1.read().split())
+            kiyaslanacak2 = set(file2.read().split())
+
+        intersection = len(kiyaslanacak1.intersection(kiyaslanacak2))
+        union = len(kiyaslanacak1.union(kiyaslanacak2))
 
         if union == 0 or intersection == 0:
-            print("Dosyalardan biri ya da her ikisi de boş olduğu için benzerlik yoktur")
-            return 0
-        benzerlik_Degeri = str(intersection / union)
-    
-        secilen_dosya_yuzu.config(text="Jaccard Benzerliği:" + benzerlik_Degeri )
 
-    def secilen_tum_dosyalarda_kiyas(self, label_widget):
-        if Dosyaverilerinidüzenleme.selected_files:
-            dosya_sayisi = len(Dosyaverilerinidüzenleme.selected_files)
-            for i in range(dosya_sayisi):
-                for j in range(i + 1, dosya_sayisi):
-                    self.jaccard_benzerlik(Dosyaverilerinidüzenleme.selected_files[i], Dosyaverilerinidüzenleme.selected_files[j], label_widget)
-
-    def secilen_iki_dosya_kiyasi(self, label_widget):
-        selected_files = filedialog.askopenfilenames(title="Dosya Seç", filetypes=[("Text Dosyaları", "*.txt")])
-        if len(selected_files) == 2:  
-            dosya_listesi = "\n".join(selected_files)  
-            label_widget.config(text="Seçilen Dosyalar:\n" + dosya_listesi)
+            yazdirilacak="Dosyalardan biri ya da her ikisi de boş olduğu için benzerlik yoktur"
+            return yazdirilacak
         
-            dosya_sayisi = len(selected_files)
-            print(f"{dosya_sayisi} dosya seçildi.")
-            return selected_files
-        else:
-            print("Lütfen sadece iki dosya seçin.")
+        benzerlik_degeri = intersection / union
+        return benzerlik_degeri
+    def benzerlik_ekrana_yazdirma(self, analiz_turu):
+        if analiz_turu == "benzerlik":
+            analiz_sonuclari = Dosyakiyaslama().dosya_secme()
+
+        sonuc_penceresi = Toplevel(arayuz)
+        sonuc_penceresi.title("Analiz Sonuçları")
+
+
+        sonuclar_label = Label(sonuc_penceresi, text="Analiz Sonuçları:", font=("Helvetica", 14, 'bold'))
+        sonuclar_label.pack(pady=5)
+        sonuclar_text = ScrolledText(sonuc_penceresi, width=100, height=25, font=("Helvetica", 12))
+        sonuclar_text.pack(pady=5)
+
+        Button(sonuc_penceresi, text="Geri Dön", command=lambda: geri_don(sonuc_penceresi)).pack(pady=5)
+        for sonuc in analiz_sonuclari:
+            sonuclar_text.insert('end', f"{sonuc}\n")
+        sonuclar_text.config(state='disabled')
+
+
+def harf_sikligi(metin):
+    harfler = 'abcçdefgğhıijklmnoöprsştuüvyzxwq'
+
+    harf_sikliklari = {h: 0 for h in harfler}
+
+    for char in metin.lower():
+        if char in harfler:
+            harf_sikliklari[char] += 1
+
+    analiz_sonuclari = {}
+    for harf, sayi in harf_sikliklari.items():
+        analiz_sonuclari[harf] = sayi
+
+    return analiz_sonuclari
+
+def kelime_sikligi(metin):
+    metin = metin.lower()
+    kelimeler = word_tokenize(metin)
+
+    gereksiz_kelime = set(stopwords.words('turkish'))
+    noktalama_cikar = set(string.punctuation)
+
+    son_metin = []
+
+    for kelime in kelimeler :
+        if kelime not in gereksiz_kelime and kelime not in noktalama_cikar:
+            son_metin.append(kelime)
+
+    son_metin = Counter(son_metin) #Burada hangi kelimenin kaç kez geçtiğini buluyoruz
+
+    en_cok = son_metin.most_common(5)
+    en_az = son_metin.most_common()[:-5:-1] #Listenin son elemanlarını bulur.
+
+    en_cok_kelime = [word[0] for word in en_cok]
+    en_cok_deger = [word[1] for word in en_cok]
+
+    en_az_kelime = [word[0] for word in en_az]
+    en_az_deger = [word[1] for word in en_az]
+
+    plt.subplot(2,1,1) # 2 tane satır her satırda  1 grafik olsun
+    plt.bar(en_cok_kelime, en_cok_deger)
+
+    plt.xlabel("En Çok Kullanılan Kelimeler")
+    plt.ylabel("Sıklık")
+    plt.title("Kelime Sıklığı Grafikleri")
+    plt.subplot(2,1,2)
+    plt.bar(en_az_kelime, en_az_deger, color='red')
+
+    plt.xlabel("En Az Kullanılan Kelimeler")
+    plt.ylabel("Sıklık")
+
+    plt.tight_layout()
+
+
+    plt.show()
+def duygu_analiz(metin):
+    translator = Translator()
+    ing = translator.translate(metin)
+    son = ing.text
+    analiz = SentimentIntensityAnalyzer()
+    skor = analiz.polarity_scores(son)
+
+    olumlu = skor["pos"] * 100
+    olumsuz = skor["neg"] * 100
+    notr = skor["neu"] * 100
+
+    analiz_sonuclari = {
+        "Pozitif Yüzde": olumlu,
+        "Negatif Yüzde": olumsuz,
+        "Nötr Yüzde": notr
+    }
+    return analiz_sonuclari
+def temel_analiz(metin):
+    kelimeler = nltk.word_tokenize(metin)
+    cumleler = nltk.sent_tokenize(metin)
+    kelime_sayisi = len(kelimeler)
+    cumle_sayisi = len(cumleler)
+    kelime_sayisi = kelime_sayisi - cumle_sayisi
+    noktalama_olmayan = ""
+    noktalama = string.punctuation
+    for char in metin:
+        if char not in noktalama and not char.isspace():
+            noktalama_olmayan = noktalama_olmayan + char
+
+    karakter_sayisi = len(noktalama_olmayan)
+
+    ortalama_cumle_uzunlugu = kelime_sayisi/cumle_sayisi
+    ortalama_kelime_uzunlugu = karakter_sayisi/kelime_sayisi
+
+    analiz_sonuclari = {
+        "Kelime Sayısısı": kelime_sayisi,
+        "Cümle Sayısı": cumle_sayisi,
+        "Karakter Sayısı": karakter_sayisi,
+        "Ortalama Cümle Uzunluğu": ortalama_cumle_uzunlugu,
+        "Ortalama Kelime Uzunluğu": ortalama_kelime_uzunlugu
+    }
+    return analiz_sonuclari
+
+
+
+arayuz = Tk()
+arayuz.title("Metin Analiz Uygulaması")
+
+canvas = Canvas(arayuz, height=800, width=1100)
+canvas.pack()
+
+frame_ust = Frame(arayuz, bg='light blue')
+frame_ust.place(relx=0.1, rely=0.1, relwidth=0.75, relheight=0.1)
+
+frame_sol = Frame(arayuz, bg='light blue')
+frame_sol.place(relx=0.1, rely=0.21, relwidth=0.23, relheight=0.55)
+
+frame_sag = Frame(arayuz, bg='light blue')
+frame_sag.place(relx=0.34, rely=0.21, relwidth=0.51, relheight=0.55)
+
+Label(frame_ust, text="Metin Analiz Uygulaması", font=("Helvetica", 22, 'bold'), bg='light blue').pack(pady=15, anchor='center')
+Label(frame_sol, text="Seçenekler", font=("Helvetica", 16, 'bold'), bg='light blue').pack(pady=10, anchor='center')
+
+Button(frame_sol, text="Temel Analiz", command=lambda: analiz_menu("temel"), width=20, font=("Helvetica", 12)).pack(pady=5)
+Button(frame_sol, text="Kelime Sıklığı", command=lambda: analiz_menu2(), width=20, font=("Helvetica", 12)).pack(pady=5)
+Button(frame_sol, text="Duygu Analizi", command=lambda: analiz_menu("duygu"), width=20, font=("Helvetica", 12)).pack(pady=5)
+Button(frame_sol, text="Harf Sıklığı", command=lambda: analiz_menu("harf"), width=20, font=("Helvetica", 12)).pack(pady=5)
+Button(frame_sol, text="Arama ve Filtreleme", command=lambda: Arama_yapma().dosya_secme(), width=20, font=("Helvetica", 12)).pack(pady=5)
+Button(frame_sol, text="Metin Değiştirme İşlemleri",command=lambda:Metin_islemleri().dosya_secme(), width=20, font=("Helvetica", 12)).pack(pady=5)
+Button(frame_sol, text="Benzerlik Analizi", command=lambda:Dosyakiyaslama().benzerlik_ekrana_yazdirma("benzerlik") , width=20, font=("Helvetica", 12)).pack(pady=5)
+Button(frame_sol, text="Dosya Veritabanı", command=lambda: veritabani_goster(), width=20, font=("Helvetica", 12)).pack(pady=5)
+Button(frame_sol, text="Kullanım Kılavuzu", command=lambda : analiz_menu(), width=20, font=("Helvetica", 12)).pack(pady=5)
+
+
+def veritabani_goster():
+    global veritabani_penceresi
+    veritabani_penceresi = Toplevel(arayuz)
+    veritabani_penceresi.title("Dosya Veritabanı")
+
+    with open("C:\\Users\\ENES\\Desktop\\Metin_Analiz_Uyg\\pythonProject\\veritabani.json", "r") as dosya:
+        veritabani = json.load(dosya)
+
+    dosyalar = veritabani["dosyalar"]
+
+    dosya_adlari = [dosya["dosya_adi"] for dosya in dosyalar]
+
+    Label(veritabani_penceresi, text="Dosya Adları:", font=("Helvetica", 14, 'bold')).pack(pady=10)
+
+    for dosya_adi in dosya_adlari:
+        Button(veritabani_penceresi, text=dosya_adi, command=lambda d=dosya_adi: dosya_goster(d)).pack(pady=5)
+
+    def dosya_ekle():
+        secim = askopenfilename(initialdir="C:\\Users\\ENES\\Desktop\\Metinler",
+                                 title="Dosya Seç",
+                                 filetypes=(("Text Files", "*.txt"), ("All Files", "*.*")))
+        if not secim:
             return
+
+        dosya_adi = os.path.basename(secim)
+        dosya_yolu = secim
+
+        with open("C:\\Users\\ENES\\Desktop\\Metin_Analiz_Uyg\\pythonProject\\veritabani.json", "r+") as file:
+            dosya_veritabani = json.load(file)
+
+            for dosya in dosya_veritabani["dosyalar"]:
+                if dosya["dosya_adi"] == dosya_adi:
+                    messagebox.showerror("Hata", "Bu dosya zaten veritabanında mevcut!")
+                    return
+
+            dosya_veritabani["dosyalar"].append({"dosya_adi": dosya_adi, "yol": dosya_yolu})
+
+            file.seek(0)
+            json.dump(dosya_veritabani, file, indent=4)
+            file.truncate()
+
+        messagebox.showinfo("Başarılı", "Dosya başarıyla eklendi.")
+
+
+
+    # Dosya ekleme butonu
+    Button(veritabani_penceresi, text="Dosya Ekle", command=dosya_ekle).pack(pady=5)
+
+
+
+def dosya_goster(dosya_adi):
+    dosya_yolu = None
+    with open("C:\\Users\\ENES\\Desktop\\Metin_Analiz_Uyg\\pythonProject\\veritabani.json", "r") as file:
+        dosya_veritabani = json.load(file)
+
+    for dosya in dosya_veritabani["dosyalar"]:
+        if dosya["dosya_adi"] == dosya_adi:
+            dosya_yolu = dosya["yol"]
+            break
+
+    if dosya_yolu:
+        with open(dosya_yolu, "r", encoding="utf-8") as dosya:
+            metin = dosya.read()
+            metin_goster(metin)
+
+def metin_goster(metin):
+    metin_penceresi = Toplevel(arayuz)
+    metin_penceresi.title("Metin Göster")
+
+    metin_label = Label(metin_penceresi, text="Metin:", font=("Helvetica", 14, 'bold'))
+    metin_label.pack(pady=5)
+    metin_text = ScrolledText(metin_penceresi, width=60, height=10, font=("Helvetica", 12))
+    metin_text.pack(pady=5)
+    metin_text.insert('end', metin)
+
+    Button(metin_penceresi, text="Kapat", command=metin_penceresi.destroy).pack(pady=5)
+
+def analiz_menu2():
+    analiz_penceresi = Toplevel(arayuz)
+    analiz_penceresi.title("Analiz Seçenekleri")
+
+    Label(analiz_penceresi, text="Lütfen bir seçenek seçin", font=("Helvetica", 14)).pack(pady=10)
+
+    Button(analiz_penceresi, text="Bilgisayardan Dosya Seç",
+           command=lambda: [analiz_penceresi.destroy(), dosya_sec2()]).pack(pady=5)
+    Button(analiz_penceresi, text="Kendin Metin Gir",
+           command=lambda: [analiz_penceresi.destroy(), metin_gir2()]).pack(pady=5)
+
+def metin_gir2():
+    metin_penceresi = Toplevel(arayuz)
+    metin_penceresi.title("Metin Girin")
+
+    metin_label = Label(metin_penceresi, text="Lütfen metni aşağıya giriniz: ",font=("Helvetica", 14, 'bold'))
+    metin_label.pack(pady=10)
+    metin_text = ScrolledText(metin_penceresi, width=60, height=10, font=("Helvetica", 12))
+    metin_text.pack(pady=10)
+
+    def analiz_et():
+        metin = metin_text.get(1.0, 'end').strip()
+        kelime_sikligi(metin)
+        metin_penceresi.destroy()
+
+    Button(metin_penceresi, text="Analiz Et", command=analiz_et).pack(pady=10)
+
+def dosya_sec2():
+    secim=askopenfilename(initialdir="C:\\Users\\ENES\\Desktop\\Metinler",
+                          title="dosya aç",
+                          filetypes=(("text files", "*.txt"),("all files", "*.*")))
+    if secim:
+        with open(secim, 'r', encoding='utf-8') as dosya:
+            icerik = dosya.read()
+            kelime_sikligi(icerik)
+
+def analiz_menu(analiz_turu):
+    analiz_penceresi = Toplevel(arayuz)
+    analiz_penceresi.title("Analiz Seçenekleri")
+
+    Label(analiz_penceresi, text="Lütfen bir seçenek seçin", font=("Helvetica", 14)).pack(pady=10)
+
+    Button(analiz_penceresi, text="Bilgisayardan Dosya Seç", command=lambda: [analiz_penceresi.destroy(), dosya_sec(analiz_turu)]).pack(pady=5)
+    Button(analiz_penceresi, text="Kendin Metin Gir", command=lambda: [analiz_penceresi.destroy(), metin_gir(analiz_turu)]).pack(pady=5)
+
+def dosya_sec(analiz_turu):
+    secim=askopenfilename(initialdir="C:\\Users\\ENES\\Desktop\\Metinler",
+                          title="dosya aç",
+                          filetypes=(("text files", "*.txt"),("all files", "*.*")))
+    if secim:
+        with open(secim, 'r', encoding='utf-8') as dosya:
+            icerik = dosya.read()
+            metin_ve_analiz_goster(icerik, analiz_turu)
+
+def metin_ve_analiz_goster(metin, analiz_turu):
+
+    if analiz_turu == "temel" :
+        analiz_sonuclari = temel_analiz(metin)
+    elif analiz_turu == "harf" :
+        analiz_sonuclari = harf_sikligi(metin)
+    elif analiz_turu == "duygu" :
+        analiz_sonuclari = duygu_analiz(metin)
     
-    def benzerlik_kıyaslama_islemi(self, label_widget):
-        dosyalar = self.secilen_iki_dosya_kiyasi(label_widget)
-        if dosyalar:
-            self.jaccard_benzerlik(*dosyalar, label_widget)
-        else:
-            print("Dosya seçme işlemi tamamlanmadı.")
 
-    def benzerlik_kıyaslama(self, label_widget):
-        acilacak_diger_pencere = tk.Tk()
-        acilacak_diger_pencere.title("Metin Benzerlik Oranı")
-        acilacak_diger_pencere.geometry('450x500')
+    sonuc_penceresi = Toplevel(arayuz)
+    sonuc_penceresi.title("Analiz Sonuçları")
 
-        label = tk.Label(acilacak_diger_pencere, text="Benzerlik Kıyaslama", fg="magenta", font='Times 16 bold' )
-        label.pack()
+    metin_label = Label(sonuc_penceresi, text="Metin:", font=("Helvetica", 14, 'bold'))
+    metin_label.pack(pady=5)
+    metin_text = ScrolledText(sonuc_penceresi, width=60, height=10, font=("Helvetica", 12))
+    metin_text.pack(pady=5)
+    metin_text.insert('end', metin)
 
-        buton = tk.Button(acilacak_diger_pencere, text="Secilen Tüm Dosyalar İçin Benzerlik Kıyaslaması", command=lambda: self.secilen_tum_dosyalarda_kiyas(label_widget), activebackground='pink')
-        buton.place(x=80, y=50)
+    sonuclar_label = Label(sonuc_penceresi, text="Analiz Sonuçları:", font=("Helvetica", 14, 'bold'))
+    sonuclar_label.pack(pady=5)
+    sonuclar_text = ScrolledText(sonuc_penceresi, width=60, height=10, font=("Helvetica", 12))
+    sonuclar_text.pack(pady=5)
 
-        buton2 = tk.Button(acilacak_diger_pencere, text="Secilen 2 Dosyanın Benzerliğini Kıyaslama", command=lambda: self.benzerlik_kıyaslama_islemi(label_widget), activebackground='pink')
-        buton2.place(x=80, y=90)
+    Button(sonuc_penceresi, text="Geri Dön", command=lambda: geri_don(sonuc_penceresi)).pack(pady=5)
+    for anahtar, deger in analiz_sonuclari.items():
+        sonuclar_text.insert('end', f"{anahtar}: {deger}\n")
+    sonuclar_text.config(state='disabled') #etkileşim yok
 
+def geri_don(pencere):
+    pencere.destroy()
+def metin_gir(analiz_turu):
+    metin_penceresi = Toplevel(arayuz)
+    metin_penceresi.title("Metin Girin")
 
+    metin_label = Label(metin_penceresi, text="Lütfen metni aşağıya giriniz: ",font=("Helvetica", 14, 'bold'))
+    metin_label.pack(pady=10)
+    metin_text = ScrolledText(metin_penceresi, width=60, height=10, font=("Helvetica", 12))
+    metin_text.pack(pady=10)
 
-class Pdfle_ilgili_islemler():
-    def __init__(self, pencere):
-        self.pencere = pencere
-        
+    def analiz_et():
+        metin = metin_text.get(1.0, 'end').strip()
+        metin_ve_analiz_goster(metin, analiz_turu)
+        metin_penceresi.destroy()
 
-    def yeni_arayuz(self):
-        self.yeni_pencere = tk.Tk()
-        self.yeni_pencere.title("PDF'e Dayanan İşlem Yapısı")
-        self.yeni_pencere.geometry('650x575')
-
-        label = tk.Label(self.yeni_pencere, text="PDF ANALİZİ", fg="#FFB347", font='Times 16 bold')
-        label.pack()
-
-        buton = tk.Button(self.yeni_pencere, text="PDF Ekle", command=lambda:self.pdf_secme(), activebackground="#FFB347")
-        buton.pack()
-
-        self.dosya_label = tk.Label(self.yeni_pencere, text="Seçilen Dosyalar:\n")  
-        self.dosya_label.pack()
-
-        buton1 = tk.Button(self.yeni_pencere, text="Toplam Kelime Sayısını Hesapla", command=lambda:self.kelime_sayisini_hesapla(), activebackground="#FF6961")
-        buton1.pack()
-
-        self.kelime_sayisi_label = tk.Label(self.yeni_pencere, text="")
-        self.kelime_sayisi_label.pack()
-
-        buton2=tk.Button(self.yeni_pencere, text="Harf Sayısı Hesapla", command=lambda:self.harf_sayisi(), activebackground="#B19CD9")
-        buton2.pack()
-
-        buton3=tk.Button(self.yeni_pencere, text="Cümle Sayısı Hesapla", command=lambda:self.cumle_sayisi(), activebackground="#FFC0CB")
-        buton3.pack()
-
-        buton4=tk.Button(self.yeni_pencere, text="Benzerlik Kıyasla", command=lambda:self.jaccard_benzerligi(), activebackground="#A0D6B4")
-        buton4.pack()
+    Button(metin_penceresi, text="Analiz Et", command=analiz_et).pack(pady=10)
 
 
-
-        self.yeni_pencere.mainloop()
-
-    def buton_tiklandiginda(self):
-        self.pencere.destroy()
-        self.yeni_arayuz()
-
-    def pdf_secme(self):
-        self.selected_files = filedialog.askopenfilenames(title="Dosya Seç", filetypes=[("PDF Dosyaları", "*.pdf")])
-        if self.selected_files:
-            dosya_listesi = "\n".join(self.selected_files)
-            self.dosya_label.config(text="Seçilen Dosyalar:\n" + dosya_listesi)  
-
-    def kelime_sayisini_hesapla(self):
-        
-        toplam_kelime_sayisi = 0
-        for dosya in self.selected_files:
-            with open(dosya, 'rb') as pdf_file:
-                pdf_reader = PyPDF2.PdfReader(pdf_file)
-                kelime_sayisi = 0
-                for page in pdf_reader.pages:
-                    yazi = page.extract_text()
-                    if yazi:
-                        kelimeler = nltk.word_tokenize(yazi)
-                    for kelime in kelimeler:
-                        if kelime.isalnum(): 
-                            kelime_sayisi += 1
-            toplam_kelime_sayisi += kelime_sayisi
-        self.kelime_sayisi_label.config(text=f"Metinlerde Geçen Toplam Kelime Sayısı: {toplam_kelime_sayisi}")
-
-    def harf_sayisi(self):
-        if self.selected_files:
-
-            for dosya in self.selected_files:
-                with open(dosya, 'rb') as pdf_file:
-                    pdf_okuma = PyPDF2.PdfReader(pdf_file)
-                    kelimeler = []
-                    toplam_harf_sayisi = 0
-                    for sayfa in pdf_okuma.pages:
-                        yazi = sayfa.extract_text()
-                        if yazi:
-                            for kelime in nltk.word_tokenize(yazi):
-                                if kelime.isalnum():
-                                    kelimeler.append(kelime)
-                                    toplam_harf_sayisi += len(kelime)
-                    dosya_adi = dosya.split("/")[-1]
-                    yazdirilacak = f"Toplam Harf Sayısı ({dosya_adi}): {toplam_harf_sayisi}"
-                label = tk.Label(self.yeni_pencere, text=yazdirilacak)
-                label.pack()
-
-
-    def pdf_jaccard_benzerligi_hesaplama(self, secilen1, secilen2):
-        with open(secilen1, 'rb') as dosya1, open(secilen2, 'rb') as dosya2:
-            pdf1 = PyPDF2.PdfReader(dosya1)
-            pdf2 = PyPDF2.PdfReader(dosya2)
-            kelime_seti1 = set()
-            kelime_seti2 = set()
-            for sayfa in pdf1.pages:
-                kelime_seti1.update(word_tokenize(sayfa.extract_text().lower()))
-            for sayfa in pdf2.pages:
-                kelime_seti2.update(word_tokenize(sayfa.extract_text().lower()))
-            benzerlik = len(kelime_seti1.intersection(kelime_seti2)) / len(kelime_seti1.union(kelime_seti2))
-            secilen_dosya_Adi = secilen1.split('/')[-1] 
-            secilen_dosya_Adi1 = secilen2.split('/')[-1]
-            yazdirilacak = f" ({secilen_dosya_Adi} - {secilen_dosya_Adi1}) dosyalarının jaccard benzerliği : {benzerlik}"
-            label = tk.Label(self.yeni_pencere, text=yazdirilacak)
-            label.pack()
-
-    def jaccard_benzerligi(self):
-        dosya_sayisi = len(self.selected_files)
-        for i in range(dosya_sayisi):
-            for j in range(i + 1, dosya_sayisi):
-                self.pdf_jaccard_benzerligi_hesaplama(self.selected_files[i], self.selected_files[j])
-
-    def cumle_sayisi(self):
-        if self.selected_files:
-            for dosya in self.selected_files:
-                with open(dosya, 'rb') as pdf_file:
-                    pdf_okuma = PyPDF2.PdfReader(pdf_file)
-                    cumleler=[]
-                    for sayfa in pdf_okuma.pages:
-                        yazi=sayfa.extract_text()
-                        for cumle in sent_tokenize(yazi):
-                            cumleler.append(cumle)
-                    dosya_adi = dosya.split("/")[-1]
-                    sayi=len(cumleler)
-                    yazdirilacak=f"Toplam Cümle Sayısı ({dosya_adi}): {sayi}"
-
-                label = tk.Label(self.yeni_pencere, text=yazdirilacak)
-                label.pack()
-
-
-                    
-        
-
-
-def arayuz_olusturma():
-    global secilen_dosya_yuzu
-    pencere = tk.Tk()
-
-    pencere.title("Metin Analiz Uygulaması")
-    pencere.geometry('450x500')
-    label = tk.Label(pencere, text="METİN ANALİZ UYGULAMASI", fg="green", font='Times 16 bold' )
-    label.pack()
-
-    secilen_dosya_yuzu = tk.Label(pencere, text="", wraplength=400)
-    secilen_dosya_yuzu.pack()
-
-    dosya_kiyaslama = Dosyakiyaslama()
-
-    buton = tk.Button(pencere, text="Txt Dosyası Ekle", command=lambda: dosya_kiyaslama.dosya_secme(secilen_dosya_yuzu), activebackground='light green')
-    buton.pack()
-
-    buton10=tk.Button(pencere, text="PDF Dosyası Ekle", command=lambda:Pdfle_ilgili_islemler(pencere).buton_tiklandiginda(), activebackground='light green')
-    buton10.pack()
-
-    buton2 = tk.Button(pencere, text="Benzerlik Kıyaslama", command=lambda: dosya_kiyaslama.benzerlik_kıyaslama(secilen_dosya_yuzu), activebackground='light green')
-    buton2.pack()
-
-    buton3 = tk.Button(pencere, text="Dosya Verilerini Cümlelerine Ayrıma", command=lambda: Dosyaverilerinidüzenleme().cumle_ayırma(), activebackground='light green')
-    buton3.pack()
-
-    buton4 = tk.Button(pencere, text="Dosya Verilerini Kelimelerine Ayırma", command=lambda: Dosyaverilerinidüzenleme().kelimelere_ayırma(), activebackground='light green')
-    buton4.pack()
-
-    buton5 = tk.Button(pencere, text="Dosya Verilerinden Noktalama İşareti Silme", command=lambda: Dosyaverilerinidüzenleme().noktalama_isareti_silme(), activebackground='light green')
-    buton5.pack()
-
-    buton6 = tk.Button(pencere, text="En Sık ve En Az Kullanılan Kelimeler", command=lambda: Istatistik().en_az_ve_sık_kullanılan_kelime(), activebackground='light green')
-    buton6.pack()
-
-    buton7=tk.Button(pencere, text="Gereksiz Kelime Silme", command=lambda: Istatistik().etkisiz_kelime_silme(),activebackground='light green')
-    buton7.pack()
-
-    buton8=tk.Button(pencere, text="Dosyalardaki Kelime Sayıları", command=lambda: Istatistik().kelime_sayisi() ,activebackground='light green')
-    buton8.pack()
-
-    buton9=tk.Button(pencere, text="Kelime ile Arama",activebackground='light green')
-    buton9.pack()
-    
-    pencere.mainloop()
-
-arayuz_olusturma()
+arayuz.mainloop()
